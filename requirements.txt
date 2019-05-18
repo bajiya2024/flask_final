@@ -2,4 +2,3 @@ flask
 SQLAlchemy
 psycopg2
 requests
-json
