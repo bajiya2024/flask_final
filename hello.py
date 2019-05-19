@@ -1,5 +1,5 @@
 from flask import Flask, request, render_template
-import os
+import sys
 import psycopg2
 import  json
 import requests
@@ -23,9 +23,13 @@ app = Flask(__name__)
 #it have input form section in base.html file
 @app.route('/')
 def show_form():
-
+    Session = sessionmaker(db)
+    session = Session()
+    allData = session.query(GitData).all()
+    for i in allData:
+        print(i.name, i.full_name, i.language, i.forks_count, i.description)
+    #print(allData)
     return render_template('base.html')
-
 
 # Api get parameter form form section
 @app.route('/fetch_api', methods=['GET', 'POST'])
@@ -34,30 +38,35 @@ def fetch_api():
     #name = request.form.to_dict(flat=False)
     #print(name)
     first = request.form["username"]
-    print(first)
+    #print(first)
 
     url_data = requests.get('https://api.github.com/users/' + first + '/repos')
 
-
+    print("status", url_data)
     Session = sessionmaker(db)
     session = Session()
     data =  url_data.json()
-    print(data)
+    print("data",type(data))
+    if url_data.status_code == 404:
+        return render_template("wrong_user_name.html")
+
+    if data == []:
+        return render_template("wrong_user_name.html")
+
     try:
-        name = data[0]['name']
-        full_name =data[0]['full_name']
-        language =data[0]['language']
-        forks_count = data[0]['forks_count']
-        description =data[0]['description']
+        #name = data[0]['name']
+        #full_name =data[0]['full_name']
+        #language =data[0]['language']
+        #forks_count = data[0]['forks_count']
+        #description =data[0]['description']
 
-
-        user = GitData(name=name, full_name=full_name, language=language, forks_count=forks_count, description=description)
-        session.add(user)
-        session.commit()
+        for i in range(len(data)):
+            user = GitData(name=data[i]["name"], full_name=data[i]["full_name"], language=data[i]["language"], forks_count=data[i]["forks_count"], description=data[i]["description"])
+            session.add(user)
+            session.commit()
+        return render_template('submit.html')
     except KeyError as ke:
-        pass
-
-    return render_template('submit.html')
+        return render_template('submit.html')
 
 
 
@@ -71,15 +80,7 @@ def renderblog():
     Session = sessionmaker(db)
     session = Session()
     allData = session.query(GitData).all()
-
-
     return render_template('result.html', data = allData)
-
-
-
-
-
-
 
 
 if (__name__ == "__main__"):
